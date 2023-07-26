@@ -8,14 +8,10 @@ export class AuthController {
 	AuthService: AuthService;
 	router: Router;
 	envData = process.env;
+
 	constructor(AuthService: AuthService) {
 		this.AuthService = AuthService;
 		this.router = Router();
-	}
-
-	getAuthRoute(request: Request, response: Response) {
-		const text = this.AuthService.getHelloWorld();
-		return response.status(200).send({ text });
 	}
 
 	redirectToLoginPage(request: Request, response: Response) {
@@ -35,10 +31,9 @@ export class AuthController {
 			scopes,
 			code,
 		);
-		console.log(data);
 		return response.status(200).send(data);
 	}
-	
+
 	routes() {
 		this.router.get('/login', (request, response) => this.redirectToLoginPage(request, response));
 		this.router.get('/callback', async (request, response) => await this.authorizeUser(request, response));

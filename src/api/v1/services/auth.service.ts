@@ -2,6 +2,8 @@ import { autoInjectable } from 'tsyringe';
 import { RESTPostOAuth2AccessTokenResult, Routes } from 'discord-api-types/v10';
 import axios from 'axios';
 import { DISCORD_API_URL, DISCORD_API_VERSION } from '../../../config/constants';
+import prisma from './prisma.service';
+
 @autoInjectable()
 export class AuthService {
 	constructor() {}
@@ -28,5 +30,17 @@ export class AuthService {
 			},
 		);
 		return exchangeDiscordToken.data as RESTPostOAuth2AccessTokenResult;
+	}
+
+	async saveUserAccessTokenToDatabase(data: RESTPostOAuth2AccessTokenResult) {
+		const accessTokenData = await prisma.userAccessToken.create({
+			data,
+		});
+
+		return accessTokenData;
+	}
+
+	validateAccessTokenData(data: RESTPostOAuth2AccessTokenResult) {
+		return !!data.access_token && !!data.expires_in && !!data.refresh_token && !!data.scope && !!data.token_type;
 	}
 }
