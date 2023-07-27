@@ -1,15 +1,12 @@
 import { autoInjectable } from 'tsyringe';
-import { RESTPostOAuth2AccessTokenResult, Routes } from 'discord-api-types/v10';
-import axios from 'axios';
-import { DISCORD_API_URL, DISCORD_API_VERSION } from '../../../config/constants';
+import { RESTPostOAuth2AccessTokenResult } from 'discord-api-types/v10';
+import { exchangeOauth2Token, getUser } from '../DiscordAPI';
 import prisma from './prisma.service';
+import crypto from 'node:crypto';
 
 @autoInjectable()
 export class AuthService {
 	constructor() {}
-	getHelloWorld() {
-		return 'hello world';
-	}
 
 	async getAccessToken(clientId, clientSecret, redirectUrl, scopes: string[], code) {
 		const data = new URLSearchParams();
@@ -20,21 +17,26 @@ export class AuthService {
 		data.append('scope', scopes.join(' '));
 		data.append('code', code);
 
-		const exchangeDiscordToken = await axios.post(
-			`${DISCORD_API_URL}/${DISCORD_API_VERSION}${Routes.oauth2TokenExchange()}`,
-			data.toString(),
-			{
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-				},
-			},
-		);
-		return exchangeDiscordToken.data as RESTPostOAuth2AccessTokenResult;
+		const exchangeOauth2TokenResult = await exchangeOauth2Token(data);
+
+		return exchangeOauth2TokenResult;
 	}
 
-	async saveUserAccessTokenToDatabase(data: RESTPostOAuth2AccessTokenResult) {
-		const accessTokenData = await prisma.userAccessToken.create({
-			data,
+	async saveUserAuthDataToDatabase(data: RESTPostOAuth2AccessTokenResult) {
+		const encryptedToken = crypto.randomBytes(64).toString('base64');
+		const discordUser = await getUser({ access_token: data.access_token, token_type: 'Bearer' });
+
+		const accessTokenData = await prisma.userAccessToken.upsert({
+			where: { id: discordUser.id },
+			create: {
+				...data,
+				encryptedToken: encryptedToken,
+				id: discordUser.id,
+			},
+			update: {
+				...data,
+				id: discordUser.id,
+			},
 		});
 
 		return accessTokenData;

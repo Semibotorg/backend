@@ -23,15 +23,25 @@ export class AuthController {
 		const error = request.query.error;
 		if (error) return response.status(200).send(`<script>window.close();</script>`);
 		if (!code) return response.status(400).send({ msg: 'wrong code' });
+		try {
+			const data = await this.AuthService.getAccessToken(
+				this.envData.DISCORD_CLIENT_ID,
+				this.envData.DISCORD_CLIENT_SECRET,
+				this.envData.DISCORD_REDIRECT_URL,
+				scopes,
+				code,
+			);
 
-		const data = await this.AuthService.getAccessToken(
-			this.envData.DISCORD_CLIENT_ID,
-			this.envData.DISCORD_CLIENT_SECRET,
-			this.envData.DISCORD_REDITECT_URL,
-			scopes,
-			code,
-		);
-		return response.status(200).send(data);
+			const validateData = this.AuthService.validateAccessTokenData(data);
+			if (!validateData) return response.status(400).send({ msg: 'Oauth2 data is not valid' });
+
+			const user = await this.AuthService.saveUserAuthDataToDatabase(data);
+
+			return response.status(200).send({ token: user.encryptedToken });
+		} catch (error_) {
+			console.log(error_);
+			return response.status(400).send({ msg: 'Invalid "code" in request or an error occured while authorzing.' });
+		}
 	}
 
 	routes() {
