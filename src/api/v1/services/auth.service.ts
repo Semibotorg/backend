@@ -6,8 +6,6 @@ import crypto from 'node:crypto';
 
 @autoInjectable()
 export class AuthService {
-	constructor() {}
-
 	async getAccessToken(clientId, clientSecret, redirectUrl, scopes: string[], code) {
 		const data = new URLSearchParams();
 		data.append('client_id', clientId);
