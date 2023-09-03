@@ -25,15 +25,15 @@ export class AuthService {
 		const discordUser = await getUser({ access_token: data.access_token, token_type: 'Bearer' });
 
 		const accessTokenData = await prisma.userAccessToken.upsert({
-			where: { id: discordUser.id },
+			where: { discord_user_id: discordUser.id },
 			create: {
 				...data,
 				encryptedToken: encryptedToken,
-				id: discordUser.id,
+				discord_user_id: discordUser.id,
 			},
 			update: {
 				...data,
-				id: discordUser.id,
+				discord_user_id: discordUser.id,
 			},
 		});
 

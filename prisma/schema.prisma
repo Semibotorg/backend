@@ -11,14 +11,14 @@ datasource db {
 }
 
 model UserAccessToken {
-  id             String   @id
-  token_type     String
-  access_token   String
-  encryptedToken String
-  expires_in     Int
-  refresh_token  String
-  scope          String
-  createdAt      DateTime @default(now())
+  discord_user_id String   @id
+  token_type      String
+  access_token    String
+  encryptedToken  String
+  expires_in      Int
+  refresh_token   String
+  scope           String
+  createdAt       DateTime @default(now())
 }
 
 model Tiers {
@@ -31,15 +31,14 @@ model Tiers {
   premium_discord_channels    String[] @default([])
   premium_discord_roles       String[] @default([])
   premium_additional_benefits String[] @default([])
-  timestamp                   DateTime @default(now())
+  createdAt                   DateTime @default(now())
   guild_id                    String
 }
 
 model PaymentMethods {
-  id                            String   @id @default(cuid())
-  guild_id                      String
+  guild_id                      String   @id
   discord_user_id               String
   connected_stripe_account_id   String?
   connected_paypal_access_token String?
-  timestamp                     DateTime @default(now())
+  createdAt                     DateTime @default(now())
 }
