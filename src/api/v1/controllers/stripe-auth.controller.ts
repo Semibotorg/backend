@@ -27,20 +27,28 @@ export class StripeAuthController {
 	async getStripeAccountDataFromSuccessAuth(request: Request, response: Response) {
 		try {
 			const code = request.query.code as string;
-			// const discord_user_id = request.body.discord_user_id;
-			// const guild_id = request.body.guild_id;
-
-			const discord_user_id = '00000000';
-			const guild_id = '00000000';
 
 			const stripeData = await this.StripeAuthService.getStripeDataFromAuthCode(code);
+			response.status(200).send(stripeData);
+		} catch (error) {
+			console.log(error);
+			response.send({ msg: 'an error has been occured' });
+		}
+	}
 
-			const savedPaymentMethod = await this.StripeAuthService.saveStripeAuthData(
-				stripeData.stripe_user_id,
+	async saveStripeAuthData(request: Request, response: Response) {
+		try {
+			const discord_user_id = request.body.discord_user_id;
+			const guild_id = request.body.guild_id;
+			const connected_stripe_account_id = request.body.connected_stripe_account_id;
+
+			const data = await this.StripeAuthService.saveStripeAuthData(
+				connected_stripe_account_id,
 				discord_user_id,
 				guild_id,
 			);
-			response.status(200).send(savedPaymentMethod);
+
+			response.status(200).send(data);
 		} catch (error) {
 			console.log(error);
 			response.send({ msg: 'an error has been occured' });
@@ -51,6 +59,11 @@ export class StripeAuthController {
 		this.router.get(
 			'/',
 			async (request: Request, response: Response) => await this.redirectToStripeAuthLink(request, response),
+		);
+
+		this.router.get(
+			'/save',
+			async (request: Request, response: Response) => await this.saveStripeAuthData(request, response),
 		);
 
 		this.router.get(

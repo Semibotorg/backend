@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { autoInjectable } from 'tsyringe';
 import { AuthService } from '../services/auth.service';
 import { scopes } from '../../../config/constants';
-
 @autoInjectable()
 export class AuthController {
 	AuthService: AuthService;
