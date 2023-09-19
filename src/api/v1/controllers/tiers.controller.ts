@@ -4,6 +4,8 @@ import { TiersService } from '../services/tiers.service';
 import { Tier } from '../interfaces/types/tier';
 import { checkUserPermission } from '../../../utils/checkUserPermission';
 import { findAuthDataByToken } from '../../../utils/findAuthDataByToken';
+import { checkGuildRoles } from '../DiscordAPI/checkGuildRoles';
+import { checkIfBotHasAdministrator } from '../DiscordAPI';
 
 @autoInjectable()
 export class TiersContoller {
@@ -21,23 +23,34 @@ export class TiersContoller {
 			const encrypted_token = request.headers.authorization;
 			const auth_data = await findAuthDataByToken(encrypted_token);
 			const discord_user_id = auth_data.discord_user_id;
+
 			const requestedData: Tier = {
 				name: request.body.name,
 				price: request.body.price,
 				made_by: discord_user_id,
 				description: request.body.description,
-				premium_discord_channels: request.body.premium_discord_channels ?? [],
-				premium_discord_roles: request.body.premium_discord_roles ?? [],
+				premium_discord_roles: request.body.premium_discord_roles,
 				premium_additional_benefits: request.body.premium_additional_benefits ?? [],
 				guild_id: request.body.guild_id,
 			};
 
+			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
+			if (!checkIfBotHasPerm)
+				return response.status(400).send({
+					msg: `the bot doesn't have ADMINISTRATOR permission in the server, please contact the discord server owner`,
+				});
+
 			const checkPermission = await checkUserPermission(requestedData.guild_id, discord_user_id);
 			if (!checkPermission) return response.status(400).send({ msg: `You don't have ADMINISTRATOR permission` });
+
+			const checkRoles = await checkGuildRoles(requestedData.guild_id, requestedData.premium_discord_roles);
+
+			if (!checkRoles) return response.status(400).send({ msg: 'The roles inside your discord server is not valid' });
 
 			const validateData = this.TiersService.validateTiersData(requestedData);
 			if (!validateData || !discord_user_id || !auth_data || !encrypted_token)
 				return response.status(400).send({ msg: 'The data you provided is not valid' });
+
 			const data = await this.TiersService.createTier(requestedData);
 
 			return response.status(200).send(data);
@@ -60,14 +73,24 @@ export class TiersContoller {
 				price: request.body.price,
 				made_by: discord_user_id,
 				description: request.body.description,
-				premium_discord_channels: request.body.premium_discord_channels ?? [],
-				premium_discord_roles: request.body.premium_discord_roles ?? [],
+				premium_discord_roles: request.body.premium_discord_roles,
 				premium_additional_benefits: request.body.premium_additional_benefits ?? [],
 				guild_id: request.body.guild_id,
 			};
 
+			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
+			if (!checkIfBotHasPerm)
+				return response.status(400).send({
+					msg: `the bot doesn't have ADMINISTRATOR permission in the server, please contact the discord server owner`,
+				});
+
 			const checkPermission = await checkUserPermission(requestedData.guild_id, discord_user_id);
 			if (!checkPermission) return response.status(400).send({ msg: `You don't have ADMINISTRATOR permission` });
+
+			const checkRoles = await checkGuildRoles(requestedData.guild_id, requestedData.premium_discord_roles);
+
+			if (!checkRoles)
+				return response.status(400).send({ msg: 'The roles or channels inside your discord server is not valid' });
 
 			const validateData = await this.TiersService.validateTiersData(requestedData);
 			if (!validateData || !tier_id || !discord_user_id || !auth_data || !encrypted_token)
@@ -91,6 +114,12 @@ export class TiersContoller {
 				guild_id: request.body.guild_id,
 				tier_id: request.params.tierId,
 			};
+
+			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
+			if (!checkIfBotHasPerm)
+				return response.status(400).send({
+					msg: `the bot doesn't have ADMINISTRATOR permission in the server, please contact the discord server owner`,
+				});
 
 			const checkPermission = await checkUserPermission(requestedData.guild_id, discord_user_id);
 			if (!checkPermission) return response.status(400).send({ msg: `You don't have ADMINISTRATOR permission` });
@@ -119,6 +148,12 @@ export class TiersContoller {
 			if (!requestedData.guild_id || !discord_user_id || !encrypted_token || !auth_data)
 				return response.status(400).send({ msg: 'The data you provided is not valid' });
 
+			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
+			if (!checkIfBotHasPerm)
+				return response.status(400).send({
+					msg: `the bot doesn't have ADMINISTRATOR permission in the server, please contact the discord server owner`,
+				});
+
 			const checkPermission = await checkUserPermission(requestedData.guild_id, discord_user_id);
 			if (!checkPermission) return response.status(400).send({ msg: `You don't have ADMINISTRATOR permission` });
 
@@ -140,6 +175,12 @@ export class TiersContoller {
 				guild_id: request.body.guild_id,
 				tier_id: request.params.id,
 			};
+
+			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
+			if (!checkIfBotHasPerm)
+				return response.status(400).send({
+					msg: `the bot doesn't have ADMINISTRATOR permission in the server, please contact the discord server owner`,
+				});
 
 			if (!requestedData.guild_id || !discord_user_id || !requestedData.tier_id || !encrypted_token || !auth_data)
 				return response.status(400).send({ msg: 'The data you provided is not valid' });

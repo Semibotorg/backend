@@ -1,17 +1,19 @@
 import { autoInjectable } from 'tsyringe';
 import { stripe } from './stripe.service';
 import prisma from './prisma.service';
+import crypto from 'node:crypto';
 
 @autoInjectable()
 export class StripeAuthService {
-	async generateStripeOauthUrl() {
-		const url = stripe.oauth.authorizeUrl({
+	async generateStripeOauthUrl(auth_code: string) {
+		const authUrl = stripe.oauth.authorizeUrl({
 			client_id: process.env.STRIPE_CLIENT_ID,
 			response_type: 'code',
 			redirect_uri: process.env.STRIPE_OAUTH_RETURN_URL,
+			state: auth_code,
 		});
 
-		return url;
+		return authUrl;
 	}
 
 	async getStripeDataFromAuthCode(auth_code: string) {
@@ -46,5 +48,20 @@ export class StripeAuthService {
 		const filteredAccount = accounts.data.filter((account) => account.id == connected_account_id);
 
 		return filteredAccount;
+	}
+
+	async getStripeAuthDataFromGuildId(guild_id: string) {
+		const data = await prisma.paymentMethods.findFirst({
+			where: {
+				guild_id,
+			},
+		});
+
+		return data;
+	}
+
+	createReturnUrlCode() {
+		const code = crypto.randomBytes(16).toString('base64');
+		return code;
 	}
 }

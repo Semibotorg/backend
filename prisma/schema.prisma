@@ -27,8 +27,7 @@ model Tiers {
   price                       Float
   made_by                     String
   description                 String
-  premium_discord_channels    String[] @default([])
-  premium_discord_roles       String[] @default([])
+  premium_discord_roles       String[]
   premium_additional_benefits String[] @default([])
   createdAt                   DateTime @default(now())
   guild_id                    String
@@ -43,11 +42,10 @@ model PaymentMethods {
 }
 
 model Subscription {
-  id              String   @id @default(cuid())
   tier_id         String
-  discord_user_id String
-  start_date      DateTime @default(now())
-  end_date        DateTime
+  discord_user_id String   @id
+  start_date      String
+  end_date        String
   status          String
   createdAt       DateTime @default(now())
   guild_id        String

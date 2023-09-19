@@ -57,6 +57,14 @@ export class TiersService {
 	}
 
 	validateTiersData(data: Tier) {
-		return !!data.description && !!data.guild_id && !!data.made_by && !!data.name && !!data.price;
+		return (
+			!!data.description &&
+			!!data.premium_discord_roles &&
+			!!data.guild_id &&
+			!!data.made_by &&
+			!!data.name &&
+			!!data.price &&
+			data.price < 2
+		);
 	}
 }
