@@ -6,15 +6,18 @@ import { checkUserPermission } from '../../../utils/checkUserPermission';
 import { findAuthDataByToken } from '../../../utils/findAuthDataByToken';
 import { checkGuildRoles } from '../DiscordAPI/checkGuildRoles';
 import { checkIfBotHasAdministrator } from '../DiscordAPI';
+import { PremiumSubscriptionService } from '../services/premium-subscription.service';
 
 @autoInjectable()
 export class TiersContoller {
 	envData = process.env;
 	router: Router;
 	TiersService: TiersService;
+	PremiumSubscriptionService: PremiumSubscriptionService;
 
-	constructor(TiersService: TiersService) {
+	constructor(TiersService: TiersService, PremiumSubscriptionService: PremiumSubscriptionService) {
 		this.TiersService = TiersService;
+		this.PremiumSubscriptionService = PremiumSubscriptionService;
 		this.router = Router();
 	}
 
@@ -34,6 +37,10 @@ export class TiersContoller {
 				guild_id: request.body.guild_id,
 			};
 
+			const validateData = this.TiersService.validateTiersData(requestedData);
+			if (!validateData || !discord_user_id || !auth_data || !encrypted_token)
+				return response.status(400).send({ msg: 'The data you provided is not valid' });
+
 			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
 			if (!checkIfBotHasPerm)
 				return response.status(400).send({
@@ -47,9 +54,20 @@ export class TiersContoller {
 
 			if (!checkRoles) return response.status(400).send({ msg: 'The roles inside your discord server is not valid' });
 
-			const validateData = this.TiersService.validateTiersData(requestedData);
-			if (!validateData || !discord_user_id || !auth_data || !encrypted_token)
-				return response.status(400).send({ msg: 'The data you provided is not valid' });
+			const isGuildPremium = await this.PremiumSubscriptionService.getPremiumSubscriptionByGuildId(
+				requestedData.guild_id,
+			);
+
+			const tiersOfGuild = await this.TiersService.getAllTiersByGuildId(requestedData.guild_id);
+			if (!isGuildPremium && tiersOfGuild.length > 0)
+				return response.status(400).send({
+					msg: 'Please subscribe to our Premium membership to get permission making more than one tier for your discord server',
+				});
+
+			if (!isGuildPremium && requestedData.premium_discord_roles.length > 1)
+				return response.status(400).send({
+					msg: 'Please subscribe to our Premium membership to get permission adding more than one role for your tier',
+				});
 
 			const data = await this.TiersService.createTier(requestedData);
 
@@ -78,6 +96,10 @@ export class TiersContoller {
 				guild_id: request.body.guild_id,
 			};
 
+			const validateData = await this.TiersService.validateTiersData(requestedData);
+			if (!validateData || !tier_id || !discord_user_id || !auth_data || !encrypted_token)
+				return response.status(400).send({ msg: 'The data you provided is not valid' });
+
 			const checkIfBotHasPerm = await checkIfBotHasAdministrator(requestedData.guild_id);
 			if (!checkIfBotHasPerm)
 				return response.status(400).send({
@@ -92,9 +114,18 @@ export class TiersContoller {
 			if (!checkRoles)
 				return response.status(400).send({ msg: 'The roles or channels inside your discord server is not valid' });
 
-			const validateData = await this.TiersService.validateTiersData(requestedData);
-			if (!validateData || !tier_id || !discord_user_id || !auth_data || !encrypted_token)
-				return response.status(400).send({ msg: 'The data you provided is not valid' });
+			const isGuildPremium = await this.PremiumSubscriptionService.getPremiumSubscriptionByGuildId(
+				requestedData.guild_id,
+			);
+
+			const tierByTierId = await this.TiersService.getTierById(tier_id, requestedData.guild_id);
+			if (
+				(!isGuildPremium && tierByTierId[0].premium_discord_roles.length > 0) ||
+				(!isGuildPremium && requestedData.premium_discord_roles.length > 1)
+			)
+				return response.status(400).send({
+					msg: 'Please subscribe to our Premium membership to get permission adding more than one role for your tier',
+				});
 
 			const data = await this.TiersService.updateTier(tier_id, requestedData.guild_id, requestedData);
 			return response.status(200).send(data);

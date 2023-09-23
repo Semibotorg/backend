@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import { autoInjectable } from 'tsyringe';
+
 import { RedisService } from '../services/redis.service';
 import { SubscriptionService } from '../services/subscription.service';
-import { autoInjectable } from 'tsyringe';
 import { TiersService } from '../services/tiers.service';
 import { findAuthDataByToken } from '../../../utils/findAuthDataByToken';
 import { checkIfBotHasAdministrator, checkIfUserHasAdministrator } from '../DiscordAPI';
@@ -9,6 +10,8 @@ import { StripeAuthService } from '../services/stripe-auth.service';
 import { calculateNextPaymentDate, checkIfAnyElementInObjectIsEmpty, nowDate } from '../../../utils';
 import { Tier } from '../interfaces/types/tier';
 import { setMultipleRolesForUser } from '../DiscordAPI/setMultipleRolesForUser';
+import { PremiumSubscriptionService } from '../services/premium-subscription.service';
+import { PaymentHistory } from '../services/payment-history.service';
 
 @autoInjectable()
 export class SubscriptionController {
@@ -17,18 +20,24 @@ export class SubscriptionController {
 	SubscriptionService: SubscriptionService;
 	TiersService: TiersService;
 	StripeAuthService: StripeAuthService;
+	PaymentHistory: PaymentHistory;
+	PremiumSubscriptionService: PremiumSubscriptionService;
 
 	constructor(
 		RedisService: RedisService,
 		SubscriptionService: SubscriptionService,
 		TiersService: TiersService,
 		StripeAuthService: StripeAuthService,
+		PremiumSubscriptionService: PremiumSubscriptionService,
+		PaymentHistory: PaymentHistory,
 	) {
 		this.router = Router();
 		this.RedisService = RedisService;
 		this.SubscriptionService = SubscriptionService;
 		this.TiersService = TiersService;
+		this.PaymentHistory = PaymentHistory;
 		this.StripeAuthService = StripeAuthService;
+		this.PremiumSubscriptionService = PremiumSubscriptionService;
 	}
 
 	async redirectUserToPaymentLink(request: Request, response: Response) {
@@ -59,6 +68,16 @@ export class SubscriptionController {
 		const returnCode = this.SubscriptionService.createReturnUrlCode();
 		await this.RedisService.setJsonData(returnCode, { tier: tier[0], discord_user_id }, 60 * 60 * 25);
 		const stripeAuthData = await this.StripeAuthService.getStripeAuthDataFromGuildId(tier[0].guild_id);
+		const checkIfGuildPremium = await this.PremiumSubscriptionService.isGuildPremium(tier[0].guild_id);
+
+		await this.PaymentHistory.SaveToPaymentHistory({
+			completed: false,
+			discord_user_id,
+			guild_id: requestedData.guild_id,
+			paymentMethod: 'stripe',
+			returnCode,
+			type: 'subscription',
+		});
 
 		const stripeCheckout = await this.SubscriptionService.createPaymentLinkForTier(
 			{
@@ -66,8 +85,8 @@ export class SubscriptionController {
 				price: tier[0].price,
 			},
 			stripeAuthData.connected_stripe_account_id,
-			false,
-			`${process.env.STRIPE_CHECKOUT_RETURN_URL}/${returnCode}`,
+			checkIfGuildPremium,
+			`${process.env.STRIPE_CHECKOUT_RETURN_URL}?code=${returnCode}`,
 			process.env.STRIPE_CHECKOUT_CANCEL_URL,
 		);
 
@@ -75,10 +94,17 @@ export class SubscriptionController {
 	}
 
 	async successCheckout(request: Request, response: Response) {
-		const code = request.params.code;
+		const code = String(request.query.code).replace(' ', '');
 		if (!code) return response.status(400).send({ msg: 'your code is not valid' });
 
 		const dataFromCode: { tier: Tier; discord_user_id: string } = await this.RedisService.getJsonData(code);
+
+		const paymentHistoryData = await this.PaymentHistory.getPaymentHistory(code);
+		if (!dataFromCode) {
+			return response.status(400).send({
+				msg: `Something wrong happened while processing your payment, please contact our customer support, please share this payment code with our customer support [${paymentHistoryData.returnCode}]`,
+			});
+		}
 
 		const subscriptionData = await this.SubscriptionService.saveSubscriptionToDatabase({
 			discord_user_id: dataFromCode.discord_user_id,
@@ -86,7 +112,7 @@ export class SubscriptionController {
 			status: 'active',
 			tier_id: dataFromCode.tier.id,
 			start_date: nowDate,
-			end_date: calculateNextPaymentDate(nowDate),
+			end_date: calculateNextPaymentDate(nowDate, 30, 'date'),
 		});
 
 		await setMultipleRolesForUser(
@@ -94,6 +120,8 @@ export class SubscriptionController {
 			dataFromCode.discord_user_id,
 			dataFromCode.tier.premium_discord_roles,
 		);
+
+		await this.PaymentHistory.completePaymentHistory(code);
 
 		return response.status(200).send(subscriptionData);
 	}
@@ -158,12 +186,12 @@ export class SubscriptionController {
 		);
 
 		this.router.get(
-			'/return/:code',
+			'/return',
 			async (request: Request, response: Response) => await this.successCheckout(request, response),
 		);
 
 		this.router.get(
-			'/return/:code',
+			'/cancel',
 			async (request: Request, response: Response) => await this.cancelCheckout(request, response),
 		);
 

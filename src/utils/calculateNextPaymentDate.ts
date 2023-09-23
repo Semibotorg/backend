@@ -2,8 +2,10 @@
 
 import moment from 'moment';
 
-export function calculateNextPaymentDate(normalDate) {
-	const currentDate = moment(normalDate).add(30, 'days').format('YYYY-MM-DD');
+export function calculateNextPaymentDate(normalDate, afterDays: number, format: 'date' | 'timestamp') {
+	const currentDate = moment(normalDate)
+		.add(afterDays, 'days')
+		.format(format === 'date' ? 'YYYY-MM-DD' : 'x');
 
 	return currentDate;
 }

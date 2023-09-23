@@ -50,3 +50,22 @@ model Subscription {
   createdAt       DateTime @default(now())
   guild_id        String
 }
+
+model PremiumSubscription {
+  guild_id        String   @id
+  discord_user_id String
+  start_date      String
+  end_date        String
+  status          String
+  createdAt       DateTime @default(now())
+}
+
+model PaymentHistory {
+  guild_id        String
+  type            String
+  discord_user_id String
+  paymentMethod   String
+  completed       Boolean
+  returnCode      String   @id
+  createdAt       DateTime @default(now())
+}

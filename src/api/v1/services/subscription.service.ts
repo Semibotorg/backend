@@ -4,6 +4,7 @@ import { stripe } from './stripe.service';
 import crypto from 'node:crypto';
 import prisma from './prisma.service';
 import { Subscription } from '../interfaces/types/subscription';
+
 @autoInjectable()
 export class SubscriptionService {
 	async createPaymentLinkForTier(
@@ -56,6 +57,7 @@ export class SubscriptionService {
 				end_date: subscriptionData.start_date,
 				status: subscriptionData.status,
 				tier_id: subscriptionData.tier_id,
+				discord_user_id: subscriptionData.discord_user_id,
 			},
 		});
 
@@ -84,7 +86,7 @@ export class SubscriptionService {
 	}
 
 	createReturnUrlCode() {
-		const code = crypto.randomBytes(17).toString('base64');
+		const code = crypto.randomBytes(17).toString('base64url');
 
 		return code;
 	}
