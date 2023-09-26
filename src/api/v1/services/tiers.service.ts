@@ -64,7 +64,8 @@ export class TiersService {
 			!!data.made_by &&
 			!!data.name &&
 			!!data.price &&
-			data.price < 2
+			data.price < 2 &&
+			data.price > 500
 		);
 	}
 }
