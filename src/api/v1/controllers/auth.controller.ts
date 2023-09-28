@@ -36,7 +36,12 @@ export class AuthController {
 
 			const user = await this.AuthService.saveUserAuthDataToDatabase(data);
 
-			return response.status(200).send({ token: user.encryptedToken });
+			const dataForClient = {
+				token: user.encryptedToken,
+			};
+			return response
+				.status(200)
+				.send(`<script>window.opener.postMessage("${JSON.stringify(dataForClient)}", "*"); window.close(); </script>`);
 		} catch (error_) {
 			console.log(error_);
 			return response.status(400).send({ msg: 'Invalid "code" in request or an error occured while authorzing.' });

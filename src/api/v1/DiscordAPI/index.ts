@@ -8,3 +8,7 @@ export * from './checkIfBotHasAdministrator';
 export * from './checkIfUserIsOwner';
 export * from './setMultipleRolesForUser';
 export * from './removeMultipleRoles';
+export * from './getBotGuilds';
+export * from './getGuild';
+export * from './getGuildRoles';
+export * from './getUserGuilds';
