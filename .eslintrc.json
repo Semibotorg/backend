@@ -2,7 +2,7 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": ["./tsconfig.json", "backend/tsconfig.json"]
+    "project": ["./tsconfig.json", "tsconfig.json"]
   },
   "plugins": ["unicorn", "@typescript-eslint", "prettier"],
   "extends": [

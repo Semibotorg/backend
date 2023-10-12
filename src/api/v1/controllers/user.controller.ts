@@ -37,17 +37,22 @@ export class UserController {
 	}
 
 	async getUser(request: Request, response: Response) {
-		const encrypted_token = request.headers.authorization;
-		const auth_data = await findAuthDataByToken(encrypted_token);
+		try {
+			const encrypted_token = request.headers.authorization;
+			const auth_data = await findAuthDataByToken(encrypted_token);
 
-		const user = await getUser({
-			access_token: auth_data.access_token,
-			token_type: 'Bearer',
-		});
+			const user = await getUser({
+				access_token: auth_data.access_token,
+				token_type: 'Bearer',
+			});
 
-		if (!user) return response.status(400).send({ msg: 'the user is not valid' });
+			if (!user) return response.status(400).send({ msg: 'the user is not valid' });
 
-		return response.status(200).send(user);
+			return response.status(200).send(user);
+		} catch (error) {
+			response.status(400).send({ msg: 'an error occured' });
+			console.log(error);
+		}
 	}
 
 	routes() {

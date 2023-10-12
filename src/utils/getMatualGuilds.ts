@@ -1,14 +1,16 @@
 /* eslint-disable unicorn/filename-case */
 
-import { RESTGetAPICurrentUserGuildsResult } from 'discord-api-types/v10';
+import { RESTGetAPICurrentUserGuildsResult, PermissionFlagsBits } from 'discord-api-types/v10';
+import { Guild } from 'discord.js';
 
-export function getMatualGuilds(
-	userGuilds: RESTGetAPICurrentUserGuildsResult,
-	botGuilds: RESTGetAPICurrentUserGuildsResult,
-) {
+export function getMatualGuilds(userGuilds: RESTGetAPICurrentUserGuildsResult, botGuilds: Guild[]) {
 	if (!userGuilds || !botGuilds) return;
-	const validGuilds = userGuilds.filter((guild) => (guild.permissions as bigint & 0x08) === 0x08);
-	const included: RESTGetAPICurrentUserGuildsResult = [];
+	const validGuilds = userGuilds.filter(
+		(guild) =>
+			(BigInt(guild.permissions) & BigInt(PermissionFlagsBits.Administrator)) ===
+			BigInt(PermissionFlagsBits.Administrator),
+	);
+	const included: Guild[] = [];
 	const excluded = validGuilds.filter((guild) => {
 		const findGuild = botGuilds.find((g) => g.id === guild.id);
 		if (!findGuild) return guild;

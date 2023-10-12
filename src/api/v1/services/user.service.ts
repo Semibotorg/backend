@@ -6,7 +6,7 @@ import { getMatualGuilds } from '../../../utils/getMatualGuilds';
 export class UserService {
 	async getGuilds(user_access_token: string) {
 		const userGuilds = await getUserGuilds('Bearer', user_access_token);
-		const botGuilds = await getBotGuilds('Bot', process.env.DISCORD_BOT_TOKEN);
+		const botGuilds = await getBotGuilds();
 
 		const matualGuilds = getMatualGuilds(userGuilds, botGuilds);
 
